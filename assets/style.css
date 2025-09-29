@@ -74,6 +74,9 @@ th, td {
 th {
     background-color: #3498db;
     color: white;
+    font-weight: 600;
+    text-align: center;
+    text-transform: uppercase;
 }
 
 /* Scroll limpio */
@@ -84,4 +87,10 @@ th {
 ::-webkit-scrollbar-thumb {
     background-color: #bbb;
     border-radius: 4px;
+}
+
+.dash-table-container th {
+    background-color: #003366 !important;
+    color: white !important;
+    text-align: center;
 }
