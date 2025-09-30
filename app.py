@@ -78,7 +78,7 @@ banner = html.Div(
 )
 
 # ==========================
-# FUNCIONES DE FIGURAS (SIN CAMBIOS en la lógica)
+# FUNCIONES DE FIGURAS 
 # ==========================
 def fig_matriz_area_colombia():
     df_col = df[df["COUNTRY"] == "Colombia"]
@@ -183,6 +183,51 @@ def fig_co2_pie(paises_selec):
 # ==========================
 # Pestaña 3: Problemática 2
 # ==========================
+
+
+def fig_line_matriz():
+    # Filtrar solo Colombia
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
+
+    # Filtrar productos energéticos seleccionados
+    productos_energia = ["Hydro", "Solar", "Wind", "Natural gas", "Oil", "Coal"]
+    df_col_matrx = df_col[df_col["PRODUCT"].isin(productos_energia)]
+
+    # Agrupar por año, mes y producto
+    df_col_matrx = df_col_matrx.groupby(["YEAR", "MONTH", "PRODUCT"], as_index=False)["VALUE"].sum()
+
+    # Crear columna TIME para el label del eje X
+    df_col_matrx["TIME"] = pd.to_datetime(df_col_matrx[["YEAR", "MONTH"]].assign(day=1))
+    df_col_matrx = df_col_matrx.sort_values(["TIME", "PRODUCT"])
+
+    # Convertir TIME a formato legible para el eje X
+    df_col_matrx["TIME_LABEL"] = df_col_matrx["TIME"].dt.strftime("%B %Y")  # Ej: "January 2014"
+
+    # Crear gráfica de líneas
+    fig = px.line(
+        df_col_matrx,
+        x="TIME_LABEL",
+        y="VALUE",
+        color="PRODUCT",
+        markers=True,
+        title="Generación por Fuente a lo largo de los Meses (Colombia)"
+    )
+
+    fig.update_layout(
+        xaxis_title="Mes",
+        yaxis_title="Generación (GWh)",
+        legend_title="Fuente Energética",
+        template="plotly_white",
+        height=500
+    )
+
+    # Rotar etiquetas del eje X
+    fig.update_xaxes(tickangle=90)
+
+    return fig
+
+
+
 def fig_generacion_fuentes_colombia():
     df_col = df[df["COUNTRY"] == "Colombia"]
     df_col_matrx = df_col[df_col["PRODUCT"].isin(['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal'])]
@@ -513,7 +558,50 @@ def fig_renovables_comparacion(paises_sel):
 # ==========================
 # FUNCIONES KPI 
 # ==========================
-def kpi_cards():
+def kpi_cards1():
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
+
+    # Filtrar solo productos energéticos
+    productos_energia = ["Hydro", "Wind", "Solar", "Geothermal", "Natural gas", "Oil", "Coal"]
+    renovables = ["Hydro", "Wind", "Solar", "Geothermal"]
+    df_energia = df_col[df_col["PRODUCT"].isin(productos_energia)]
+
+    # Agregar energía por año y producto (para evitar duplicados por mes)
+    df_year_prod = df_energia.groupby(["YEAR", "PRODUCT"], as_index=False)["VALUE"].sum()
+
+    # Total de energía producida (2014-2022)
+    total_generacion = df_year_prod.groupby("YEAR")["VALUE"].sum().sum()
+
+    # Total de renovables (Hydro, Wind, Solar, Geothermal)
+    total_renovables = df_year_prod[df_year_prod["PRODUCT"].isin(renovables)]["VALUE"].sum()
+
+    # Porcentaje renovables
+    pct_renovables = (total_renovables / total_generacion * 100) if total_generacion > 0 else 0
+
+    # Año de mayor y menor generación renovables (suma de todas las renovables por año)
+    renovables_by_year = df_year_prod[df_year_prod["PRODUCT"].isin(renovables)].groupby("YEAR")["VALUE"].sum()
+
+    año_max_renov = int(renovables_by_year.idxmax()) if not renovables_by_year.empty else "N/A"
+    año_min_renov = int(renovables_by_year.idxmin()) if not renovables_by_year.empty else "N/A"
+
+    return html.Div([
+        html.Div([html.H4("Total Energía Producida (2014–2022)"), 
+                  html.H3(f"{total_generacion:,.0f} GWh")], className="card"),
+        
+        html.Div([html.H4("Producción Total Renovables (2014–2022)"), 
+                  html.H3(f"{total_renovables:,.0f} GWh")], className="card"),
+        
+        html.Div([html.H4("Participación Renovables en la Matriz"), 
+                  html.H3(f"{pct_renovables:.1f}%")], className="card"),
+        
+        html.Div([html.H4("Año de Mayor Generación Renovables"), 
+                  html.H3(f"{año_max_renov}")], className="card"),
+        
+        html.Div([html.H4("Año de Menor Generación Renovables"), 
+                  html.H3(f"{año_min_renov}")], className="card"),
+    ], className="row", style={"marginBottom": "20px"})
+
+def kpi_cards2():
     df_col = df[df["COUNTRY"] == "Colombia"].copy()
 
     # Filtrar solo productos energéticos
@@ -564,22 +652,30 @@ table_header_style = {
     "textTransform": "uppercase"
 }
 
+# columnas que vamos a eliminar en la tabla de Colombia
+cols_drop = ["CODE_TIME", "TIME", "DISPLAY_ORDER", "previousYearToDate", "yearToDate", "COEF"]
+df_colombia = df[df["COUNTRY"] == "Colombia"].drop(columns=cols_drop, errors="ignore")
+
 exploracion_layout = html.Div([
     html.H3("Motivo del proyecto:", style={"textAlign": "center", "marginBottom": "10px"}),     
-    html.P("Seleccionamos esta base de datos con el propósito de identificar la evolución y la participación relativa de las fuentes de energía "
-           "(carbón, petróleo y gas natural) para Colombia entre los años 2014 y 2022, "
-           "con el fin de reconocer tendencias, fortalezas y desafíos hacia una transición energética equilibrada para Colombia "
-           "y compararlos en relación a otros países.",
-           style={"textAlign": "justify", "marginBottom": "20px"}),
+    html.P(
+        "Seleccionamos esta base de datos con el propósito de identificar la evolución y la participación relativa "
+        "de las fuentes de energía (carbón, petróleo y gas natural) para Colombia entre los años 2014 y 2022, "
+        "con el fin de reconocer tendencias, fortalezas y desafíos hacia una transición energética equilibrada "
+        "para Colombia y compararlos en relación a otros países.",
+        style={"textAlign": "justify", "marginBottom": "20px"}
+    ),
+
     html.H3("Exploración del Dataset", style={"textAlign": "center", "marginBottom": "10px"}),
 
+    # Dataset completo
     html.Div([
         html.H4("Dataset completo"),
         dash_table.DataTable(
             id="tabla-completa",
             data=df.to_dict("records"),
             columns=[{"name": c, "id": c} for c in df.columns],
-            page_size=20,
+            page_size=10,
             style_table={"overflowX": "auto"},
             style_header=table_header_style,
             style_data_conditional=[{
@@ -588,40 +684,55 @@ exploracion_layout = html.Div([
             }]
         )
     ], className="card"),
-
+    # Estadísticas del dataset completo
     html.Div([
-        html.H4("Dataset - Solo Colombia"),
+        html.H4("Estadísticas - Dataset completo"),
         dash_table.DataTable(
-            id="tabla-colombia",
-            data=df[df["COUNTRY"] == "Colombia"].to_dict("records"),
-            columns=[{"name": c, "id": c} for c in df.columns],
+            id="tabla-estadisticas-completo",
+            data=df.describe().reset_index().to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df.describe().reset_index().columns],
             page_size=20,
             style_table={"overflowX": "auto"},
             style_header=table_header_style,
         )
     ], className="card"),
 
+    # Dataset Colombia (sin columnas irrelevantes)
+    html.Div([
+        html.H4("Dataset - Solo Colombia"),
+        dash_table.DataTable(
+            id="tabla-colombia",
+            data=df_colombia.to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df_colombia.columns],
+            page_size=10,
+            style_table={"overflowX": "auto"},
+            style_header=table_header_style,
+        )
+    ], className="card"),
+
+    # Estadísticas de Colombia
     html.Div([
         html.H4("Estadísticas de Colombia"),
         dash_table.DataTable(
-            id="tabla-estadisticas",
-            data=df[df["COUNTRY"] == "Colombia"].describe().reset_index().to_dict("records"),
-            columns=[{"name": c, "id": c} for c in df[df["COUNTRY"] == "Colombia"].describe().reset_index().columns],
+            id="tabla-estadisticas-colombia",
+            data=df_colombia.describe().reset_index().to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df_colombia.describe().reset_index().columns],
             page_size=20,
             style_table={"overflowX": "auto"},
             style_header=table_header_style,
         )
-    ], className="card")
+    ], className="card"),
 ], style={"gap": "20px", "display": "flex", "flexDirection": "column"})
+
 
 # ==========================
 # TAB 2: PROBLEMÁTICA 1 (estilizada)
 # ==========================
 problem1_layout = html.Div([
-    html.H3("Problemática 1: Emisiones y matriz energética en Colombia",
+    html.H3("¿Cómo ha evolucionado la matriz energética colombiana en los últimos 10 años y qué tan rezagada está en la adopción de energías limpias?",
             style={"textAlign": "center", "marginBottom": "20px"}),
 
-    kpi_cards(),
+    kpi_cards1(),
 
     # Fila 1: Matriz y Heatmap
     html.Div([
@@ -633,16 +744,25 @@ problem1_layout = html.Div([
     html.Div([
         html.Div([dcc.Graph(figure=fig_solar_wind_line())], className="card", style={"flex": "1"}),
         html.Div([
-            html.H5("Análisis de la matriz energética en Colombia"),
-            html.P("1. Matriz energética Colombia"),
-            html.P("Esta gráfica apilada nos muestra que cada capa de energía contribuye al total de electricidad generada en Colombia."),
-            html.Br(),
-            html.P("2. Heatmap sobre aporte en Colombia"),
-            html.P("Se observa que Colombia depende casi por completo de la energía hidroeléctrica. "
-                   "La implementación de otras energías renovables es ínfima, lo que indica que esta matriz energética es vulnerable; "
-                   "cualquier sequía fuerte (fenómeno del Niño) o inconvenientes técnicos puede comprometer la estabilidad energética "
-                   "porque no hay respaldo suficiente en materia de energías solar/eólica.")
-        ], className="card", style={"flex": "0.8", "textAlign": "justify", "padding": "20px"})
+            html.H4("Conclusiones de la matriz energética en Colombia"),
+            html.H5("1. Matriz energética Colombia 2014-2022"),
+            html.P("Entre 2014 y 2022, la matriz energética colombiana se mantuvo fuertemente concentrada en la energía hidroeléctrica (60–70%) " \
+            "y en combustibles fósiles (carbón, petróleo y gas natural). A pesar del incremento reciente de la energía solar, su aporte, junto con " \
+            "el de la eólica, continúa siendo marginal frente al total."),
+            html.H5("2. Vulnerabilidad frente al cambio climático"),
+            html.P("La alta participación de la hidroeléctrica convierte al sistema en vulnerable a fenómenos como El Niño, que provocan caídas " \
+            "significativas en la generación. En estos periodos, la dependencia de fuentes fósiles aumenta, lo que no solo reduce la seguridad " \
+            "energética, sino que incrementa las emisiones de CO₂."),
+            html.H4("Recomendaciones de la matriz energética en Colombia"),
+            html.H5("1. Matriz energética Colombia 2014-2022"),
+            html.P("Entre 2014 y 2022, la matriz energética colombiana se mantuvo fuertemente concentrada en la energía hidroeléctrica (60–70%) " \
+            "y en combustibles fósiles (carbón, petróleo y gas natural). A pesar del incremento reciente de la energía solar, su aporte, junto con " \
+            "el de la eólica, continúa siendo marginal frente al total."),
+            html.H5("2. Vulnerabilidad frente al cambio climático"),
+            html.P("La alta participación de la hidroeléctrica convierte al sistema en vulnerable a fenómenos como El Niño, que provocan caídas " \
+            "significativas en la generación. En estos periodos, la dependencia de fuentes fósiles aumenta, lo que no solo reduce la seguridad " \
+            "energética, sino que incrementa las emisiones de CO₂.")
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
     ], style={"display": "flex", "gap": "20px"})
 ])
 
@@ -650,37 +770,97 @@ problem1_layout = html.Div([
 # TAB 3: PROBLEMÁTICA 2 (estilizada)
 # ==========================
 problem2_layout = html.Div([
-    html.H3("Problemática 2: Generación y comparación de energías",
-            style={"textAlign": "center", "marginBottom": "20px"}),
+    html.H3(
+        "¿Qué tan riesgosa es la sobredependencia de hidro comparada con otros países y qué alternativas energéticas se han explorado?",
+        style={"textAlign": "center", "marginBottom": "20px"}
+    ),
 
-    html.Div([dcc.Graph(figure=fig_generacion_fuentes_colombia())], className="card", style={"width": "100%"}),
+    kpi_cards2(),
 
+    # Gráfica de línea mensual
+    html.Div(
+        [dcc.Graph(figure=fig_line_matriz())],
+        className="card",
+        style={"width": "100%", "marginBottom": "30px"}
+    ),
+
+    # Fila 1: Generación años por fuente + Comparación hidro
     html.Div([
-        html.H4("Comparación participación hidroeléctrica"),
-        dcc.Dropdown(
-            id="dropdown-hydro-paises",
-            options=[{"label": p, "value": p} for p in paises],
-            value=["Colombia", "Argentina", "Brazil", "Chile"],
-            multi=True,
-            style={'width': '80%', 'margin': '10px auto'}
+        # Primera gráfica
+        html.Div(
+            [
+                html.H3("Generación años por fuente en Colombia (2014-2022)"),
+                dcc.Graph(figure=fig_generacion_fuentes_colombia())
+            ],
+            className="card",
+            style={"flex": "1", "padding": "10px"}
         ),
-        dcc.Graph(id="hydro-share-comparacion")
-    ], className="card", style={"marginTop": "20px"})
+
+        # Segunda gráfica
+        html.Div(
+            [
+                html.H3("Comparación participación hidroeléctrica", style={"marginTop": "0px"}),
+                dcc.Dropdown(
+                    id="dropdown-hydro-paises",
+                    options=[{"label": p, "value": p} for p in paises],
+                    value=["Colombia", "Argentina", "Brazil", "Chile"],
+                    multi=True,
+                    style={'width': '90%', 'margin': '10px auto'}
+                ),
+                dcc.Graph(id="hydro-share-comparacion")
+            ],
+            className="card",
+            style={"flex": "1", "padding": "10px"}
+        ),
+    ], style={"display": "flex", "gap": "20px", "marginBottom": "30px"}),
+    # recomendaciones y conclusiones
+    html.Div([
+        # Conclusiones
+        html.Div([
+            html.H4("Conclusiones Problemática 2"),
+            html.H5("Energías renovables no convencionales con avances desiguales"),
+            html.P("La energía solar mostró un crecimiento acelerado desde 2018, superando en pocos años los 450 GWh. En contraste, la eólica se " \
+            "mantuvo estancada por limitaciones estructurales y logísticas, a pesar del alto potencial en regiones como La Guajira. Esto refleja una " \
+            "asimetría en el desarrollo de energías renovables no convencionales en el país."),
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
+
+        # Segunda gráfica
+        html.Div([
+            html.H4("Recomendaciones Problemática 2"),
+            html.H5("1. Alianzas regionales e internacionales"),
+            html.P("Aprovechar experiencias exitosas de países como Chile, Dinamarca o Costa Rica para adaptar buenas prácticas regulatorias y tecnológicas que aceleren la transición energética en Colombia."),
+            html.H5("2. Impulso a proyectos eólicos en regiones estratégicas"),
+            html.P("Superar barreras sociales, logísticas y ambientales en zonas de alto potencial, como La Guajira, mediante procesos de concertación " \
+            "con comunidades locales, infraestructura adecuada y marcos normativos claros.")
+        ], className="card", style={"flex": "1",  "textAlign": "justify", "padding": "20px"}
+        ),
+    ], style={"display": "flex", "gap": "20px", "marginBottom": "30px"})
 ])
+
 
 # ==========================
 # TAB 4: PROBLEMÁTICA 3 (estilizada)
 # ==========================
 problem3_layout = html.Div([
-    html.H3("Problemática 3", style={"textAlign": "center", "marginBottom": "20px"}),
+    html.H3("¿Cuál sería el impacto en reducción de emisiones si Colombia aumenta su participación solar/eólica en un 20%?", style={"textAlign": "center", "marginBottom": "20px"}),
 
     html.Div([
-        html.Div([dcc.Graph(figure=fig_co2_total_colombia())], className="card", style={"flex": "1"}),
+        html.Div([
+            html.H4("1. Conclusiones Problemática 3"),
+            html.H5("Impacto en emisiones de CO₂"),
+            html.P("Aunque Colombia presenta menores niveles de emisiones en comparación con otros países de la región, los picos de CO₂ coinciden con caídas en la generación hidroeléctrica " \
+            "y mayor uso de fósiles. Las simulaciones sugieren que un aumento sostenido en la participación de solar y eólica reduciría significativamente las emisiones y mejoraría la resiliencia " \
+            "de la matriz, esto va muy en concordancia con los planes de la transición energética justa que plantea el actual gobierno."),
+            html.H4("2. Recomendaciones Problemática 3"),
+            html.H5("Investigación, desarrollo e innovación (I+D+i)"),
+            html.P("Fomentar proyectos de investigación en energías renovables, almacenamiento y tecnologías emergentes (como geotermia e hidrógeno verde), con participación de universidades, " \
+            "centros de investigación y el sector privado.")
+            ], className="card", style={"flex": "1",  "textAlign": "justify", "padding": "20px"}
+        ),
         html.Div([dcc.Graph(figure=fig_heatmap_co2_colombia())], className="card", style={"flex": "1"})
     ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"}),
-
     html.Div([
-        html.H4("Análisis de CO₂ por país"),
+        html.H3("Análisis de CO₂ por país"),
         dcc.Dropdown(
             id="dropdown-paises-unico",
             options=[{"label": p, "value": p} for p in paises],
@@ -694,45 +874,80 @@ problem3_layout = html.Div([
         ], style={"display": "flex", "gap": "20px"})
     ], className="card"),
 
-    html.H3("Problemática 3: Simulación de reducción de emisiones", style={"marginTop": "30px"}),
-    html.Div([dcc.Graph(figure=fig_simulacion())], className="card"),
+    
+    html.Div([
+        html.H3("Simulación de reducción de emisiones", style={"marginTop": "30px"}),
+        dcc.Graph(figure=fig_simulacion())], className="card"),
 
-    html.H3("Problemática 4: Matriz energética anual en Colombia (2014–2050)", style={"marginTop": "30px"}),
-    html.Div([dcc.Graph(figure=fig_heatmap_matriz())], className="card"),
+    
+    html.Div([
+        html.H3("Matriz energética anual en Colombia (2014–2050)", style={"marginTop": "30px"}),
+        dcc.Graph(figure=fig_heatmap_matriz())], className="card"),
 
-    html.H3("Simulación impacto Solar/Eólica en CO₂ (2014-2022)", style={"marginTop": "30px"}),
-    html.Label("Seleccione porcentaje de incremento en Solar/Eólica"),
-    dcc.Slider(
-        id="slider-renovables",
-        min=0.05, max=0.5, step=0.05,
-        value=0.2,
-        marks={i/100: f"{i}%" for i in range(5, 55, 5)},
-        updatemode="mouseup",
-        tooltip={"placement":"bottom", "always_visible":False}
-    ),
-    html.Div([dcc.Graph(id="grafico-impacto-co2")], className="card", style={"marginTop": "10px"})
 ], style={"display": "flex", "flexDirection": "column", "gap": "15px"})
 
 # ==========================
 # TAB 5: PROBLEMÁTICA 4 
 # ==========================
 problem4_layout = html.Div([
-    html.H3("Problemática 4: Comparativa renovables en América", style={"textAlign": "center", "marginBottom": "10px"}),
-
+    html.H3(
+        "¿Dónde se ubica Colombia en la transición energética regional y qué factores explican su rezago o avance?",
+        style={"textAlign": "center", "marginBottom": "20px"}
+    ),
+    
+    # Dropdown y gráfica principal
     html.Div([
-        html.Label("Selecciona los países:"),
-        dcc.Dropdown(
-            id="dropdown-renovables-paises",
-            options=[{"label": p, "value": p} for p in sorted(df["COUNTRY"].unique())],
-            value=["Colombia", 'Argentina', 'Brazil', 'Canada', 'Chile',
-                      'Costa Rica', 'Mexico', 'United States'],  # default
-            multi=True,
-            style={'width': '80%', 'margin': '10px auto'}
-        ),
-    ], style={"textAlign": "center"}),
+        html.Div([
+            html.Label("Selecciona los países:"),
+            html.Div(
+                dcc.Dropdown(
+                    id="dropdown-renovables-paises",
+                    options=[{"label": p, "value": p} for p in sorted(df["COUNTRY"].unique())],
+                    value=["Colombia", 'Argentina', 'Brazil', 'Canada', 'Chile',
+                        'Costa Rica', 'Mexico', 'United States'],
+                    multi=True,
+                    style={'minWidth': '300px'}
+                ),
+                style={
+                    "display": "flex",       # cambia inline-flex a flex
+                    "flexWrap": "wrap",      # permite que los tags vayan a la siguiente línea
+                    "justifyContent": "center",
+                    "width": "80%",
+                    "margin": "10px auto"
+                }
+            ),
+            dcc.Graph(id="graph-renovables-comparacion")
+        ], className="card", style={"padding": "20px", "marginBottom": "20px"})
+    ]),
 
-    html.Div([dcc.Graph(id="graph-renovables-comparacion")], className="card", style={"marginTop": "10px"})
-])
+    
+    # Conclusiones y recomendaciones
+    html.Div([
+        html.Div([
+            html.H4("Conclusiones Problemática 4"),
+            html.H5("Oportunidades hacia la transición energética"),
+            html.P(
+                "El país tiene un potencial considerable para expandir el uso de fuentes renovables no convencionales, "
+                "lo cual permitiría reducir riesgos climáticos, diversificar la oferta, garantizar mayor seguridad energética "
+                "y contribuir a las metas de descarbonización. Sin embargo, el avance depende de superar barreras regulatorias, "
+                "logísticas y de inversión que actualmente limitan su desarrollo."
+            )
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
+
+        html.Div([
+            html.H4("Recomendaciones Problemática 4"),
+            html.H5("Revisión de datos más actuales"),
+            html.P(
+                "Es importante corroborar los datos de esta entidad internacional con los que posee el gobierno, para "
+                "corroborar que no haya información faltante y además completar con datos de 2023 a 2025 para ver cómo se "
+                "está llevando a cabo la transición. Continuar alimentando esta base de datos para poder tomar decisiones "
+                "sobre la marcha en la implementación de energías renovables no convencionales en la transición justa y "
+                "camino a la descarbonización."
+            )
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"})
+    ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"})
+], style={"display": "flex", "flexDirection": "column", "gap": "15px"})
+
 
 # ==========================
 # FOOTER
@@ -766,7 +981,7 @@ footer = html.Div(
         html.Div(
             children=[
                 html.P(
-                    "Juan Manuel Urbano Torres | Juan Miguel Elejalde García | Yiceli Díaz",
+                    "Juan Manuel Urbano Torres | Juan Miguel Elejalde García | Yicely Díaz Tapias",
                     style={"marginBottom": "15px", "fontSize": "15px", "fontWeight": "500"},
                 ),
                 html.Div(
