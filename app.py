@@ -323,8 +323,224 @@ def fig_heatmap_co2_colombia():
     
     return fig
 
+# ==========================
+# FUNCION DE SIMULACION
+# ==========================
+
+def simular_reduccion_emisiones(aumento_pct=20):
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
+
+    # Filtrar solo desde 2015
+    df_col = df_col[df_col["YEAR"] >= 2015]
+
+    # Agrupar por año total emisiones CO2
+    base = df_col.groupby("YEAR", as_index=False)["CO2_PRODUCTION"].sum()
+    base.rename(columns={"CO2_PRODUCTION": "CO2_base"}, inplace=True)
+
+    # Proyección simple hasta 2050 (crecimiento promedio anual)
+    tasa_crec = (base["CO2_base"].iloc[-1] / base["CO2_base"].iloc[0])**(1/(len(base)-1)) - 1
+    años_futuros = pd.DataFrame({"YEAR": list(range(base["YEAR"].max()+1, 2051))})
+    años_futuros["CO2_base"] = base["CO2_base"].iloc[-1] * ((1+tasa_crec) ** (años_futuros["YEAR"]-base["YEAR"].max()))
+    base = pd.concat([base, años_futuros], ignore_index=True)
+
+    # Escenario simulado (solo esta línea)
+    base["CO2_sim"] = base["CO2_base"] * (1 - aumento_pct/100)
+
+    return base
 
 
+def fig_simulacion():
+    df_sim = simular_reduccion_emisiones(20)  # fijo en +20%
+    fig = go.Figure()
+
+    fig.add_trace(go.Scatter(
+        x=df_sim["YEAR"], y=df_sim["CO2_sim"],
+        mode="lines+markers", name="Escenario Simulado"
+    ))
+
+    fig.update_layout(
+        title="Proyección de emisiones CO₂ en Colombia (2015–2050) con +20% Solar/Eólica",
+        xaxis_title="Año",
+        yaxis_title="Emisiones CO₂ (ton)",
+        template="plotly_white",
+        title_x=0.5
+    )
+    return fig
+
+
+def simular_impacto_co2_colombia(df, porcentaje_extra=0.2):
+    """
+    Simula el impacto de aumentar solar y eólica en Colombia en un porcentaje dado.
+    porcentaje_extra: fracción a trasladar desde fósiles hacia solar/wind (ej. 0.2 = 20%)
+    """
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
+    df_col = df_col[df_col["YEAR"].between(2014, 2022)]
+
+    # ======================
+    # Escenario real
+    # ======================
+    df_col["CO2_REAL"] = df_col.apply(
+        lambda row: row["VALUE"] * COEF_MAP.get(row["PRODUCT"].lower(), 0), axis=1
+    )
+    real = df_col.groupby("YEAR")["CO2_REAL"].sum().reset_index()
+    real["Escenario"] = "Real"
+
+    # ======================
+    # Escenario simulado
+    # ======================
+    simulado = df_col.copy()
+
+    for year in simulado["YEAR"].unique():
+        # Energía total fósil de ese año
+        mask_fosil = simulado["PRODUCT"].isin(["Coal", "Oil", "Natural gas"])
+        energia_fosil = simulado[(simulado["YEAR"] == year) & mask_fosil]["VALUE"].sum()
+
+        # Extra que pasamos a renovables
+        extra = energia_fosil * porcentaje_extra  
+
+        # Reducir fósiles proporcionalmente
+        for prod in ["Coal", "Oil", "Natural gas"]:
+            mask = (simulado["YEAR"] == year) & (simulado["PRODUCT"] == prod)
+            valor_actual = simulado.loc[mask, "VALUE"]
+            if not valor_actual.empty:
+                reduccion = valor_actual.values[0] * porcentaje_extra
+                simulado.loc[mask, "VALUE"] -= reduccion
+
+        # Aumentar solar y wind
+        for prod in ["Solar", "Wind"]:
+            mask = (simulado["YEAR"] == year) & (simulado["PRODUCT"] == prod)
+            if not simulado[mask].empty:
+                simulado.loc[mask, "VALUE"] += extra / 2
+            else:
+                simulado = pd.concat([
+                    simulado,
+                    pd.DataFrame([{
+                        "COUNTRY": "Colombia",
+                        "YEAR": year,
+                        "PRODUCT": prod,
+                        "VALUE": extra/2,
+                        "CO2_PRODUCTION": 0
+                    }])
+                ])
+
+    # Recalcular emisiones con COEF_MAP
+    simulado["CO2_SIM"] = simulado.apply(
+        lambda row: row["VALUE"] * COEF_MAP.get(row["PRODUCT"].lower(), 0), axis=1
+    )
+
+    sim = simulado.groupby("YEAR")["CO2_SIM"].sum().reset_index()
+    sim["Escenario"] = "Simulado"
+
+    # ======================
+    # Comparar real vs simulado
+    # ======================
+    df_comp = pd.concat([
+        real.rename(columns={"CO2_REAL": "CO2"}),
+        sim.rename(columns={"CO2_SIM": "CO2"})
+    ])
+    return df_comp
+
+def fig_impacto_co2_colombia(df, porcentaje_extra):
+    df_comp = simular_impacto_co2_colombia(df, porcentaje_extra)
+
+    fig = px.line(
+        df_comp,
+        x="YEAR",
+        y="CO2",
+        color="Escenario",
+        markers=True,
+        title=f"Impacto en CO₂ si Colombia aumentara Solar/Eólica en {int(porcentaje_extra*100)}%",
+        template="plotly_white"
+    )
+
+    fig.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Emisiones CO₂ (Ton)",
+        title_x=0.5
+    )
+    return fig
+
+def fig_heatmap_matriz():
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
+    df_col = df_col[df_col["PRODUCT"].isin(['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal'])]
+
+    # Histórico
+    heatmap_data = df_col.groupby(['YEAR', 'PRODUCT'], as_index=False)['share'].mean()
+
+    # Años futuros
+    años_futuros = range(heatmap_data["YEAR"].max()+1, 2051)
+    proyecciones = []
+    for prod in ['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal']:
+        # último valor conocido de cada producto
+        ultimo_valor = heatmap_data.loc[heatmap_data["PRODUCT"] == prod, "share"].iloc[-1]
+        for año in años_futuros:
+            proyecciones.append({"YEAR": año, "PRODUCT": prod, "share": ultimo_valor})
+
+    df_futuro = pd.DataFrame(proyecciones)
+
+    # Concatenar histórico + proyección
+    df_hypothetical = pd.concat([heatmap_data, df_futuro], ignore_index=True)
+
+    # Pivotear
+    pivot_data = df_hypothetical.pivot(index='PRODUCT', columns='YEAR', values='share')
+
+    # Heatmap con plotly
+    fig = go.Figure(data=go.Heatmap(
+        z=pivot_data.values,
+        x=pivot_data.columns,
+        y=pivot_data.index,
+        colorscale="YlGnBu",
+        text=np.round(pivot_data.values, 4),
+        texttemplate="%{text}",
+        colorbar=dict(title="Producción (GWh)")
+    ))
+
+    fig.update_layout(
+        title="Matriz energética anual en Colombia por fuente (2014–2050)",
+        xaxis_title="Año",
+        yaxis_title="Fuente energética",
+        xaxis=dict(type="category"),
+        title_x=0.5,
+        template="plotly_white",
+        height=500
+    )
+    return fig
+
+# ==========================
+# Pestaña 5: Problemática 4
+# ==========================
+
+def fig_renovables_comparacion(paises_sel):
+    paises = ['Argentina', 'Brazil', 'Canada', 'Chile', 'Colombia', 
+              'Costa Rica', 'Mexico', 'United States']
+    
+    df_col_OECD_Am = df[df['COUNTRY'].isin(paises)]
+    df_col_OECD_Am_comp = df_col_OECD_Am[df_col_OECD_Am['PRODUCT'].isin(['Hydro','Wind','Solar','Geothermal'])]
+
+    # aporte combinado de renovables
+    df_combined_share = df_col_OECD_Am_comp.groupby(['COUNTRY','YEAR'], as_index=False)['share'].sum()
+
+    # filtrar por países seleccionados
+    df_filtered = df_combined_share[df_combined_share["COUNTRY"].isin(paises_sel)]
+
+    fig = px.line(
+        df_filtered,
+        x="YEAR",
+        y="share",
+        color="COUNTRY",
+        markers=True,
+        title="Participación de energías renovables en la Matriz Energética por País (Américas)",
+        template="plotly_white"
+    )
+
+    fig.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Participación (%)",
+        title_x=0.5,
+        margin=dict(l=40, r=40, t=60, b=40),
+    )
+
+    return fig
 
 
 # ==========================
@@ -488,9 +704,40 @@ problem3_layout = html.Div([
             html.Div([dcc.Graph(id="co2-pie-chart")], 
                      style={'width': '49%', 'display': 'inline-block'})
         ])
-    ], style={'margin-top': '20px'})
+    ], style={'margin-top': '20px'}),
+    html.H3("Problemática 3: Simulación de reducción de emisiones"),
+    dcc.Graph(figure=fig_simulacion()),
+    html.H3("Problemática 4: Matriz energética anual en Colombia (2014–2050)"),
+    dcc.Graph(figure=fig_heatmap_matriz()),
+    html.H3("Simulación impacto Solar/Eólica en CO₂ (2014-2022)"),
+    html.Label("Seleccione porcentaje de incremento en Solar/Eólica"),
+    dcc.Slider(
+        id="slider-renovables",
+        min=0.05, max=0.5, step=0.05,
+        value=0.2,
+        marks={i/100: f"{i}%" for i in range(5, 55, 5)}
+    ),
+    dcc.Graph(id="grafico-impacto-co2")
 ])
-problem4_layout = html.Div([html.H3("Problemática 4")])
+problem4_layout = html.Div([
+    html.H3("Problemática 4: Comparativa renovables en América"),
+    
+    html.Div([
+        html.Label("Selecciona los países:"),
+        dcc.Dropdown(
+            id="dropdown-renovables-paises",
+            options=[{"label": p, "value": p} for p in 
+                     ['Argentina', 'Brazil', 'Canada', 'Chile', 'Colombia', 
+                      'Costa Rica', 'Mexico', 'United States']],
+            value=["Colombia", "Brazil", "United States"],  # default
+            multi=True,
+            style={'width': '80%', 'margin': 'auto'}
+        ),
+    ], style={'margin-bottom': '20px'}),
+
+    dcc.Graph(id="graph-renovables-comparacion")
+])
+
 
 # ==========================
 # LAYOUT PRINCIPAL
@@ -546,6 +793,25 @@ def actualizar_graficas(paises_seleccionados):
 )
 def actualizar_hydro_share(paises_sel):
     return fig_hydro_share_comparacion(paises_sel)
+
+# ==========================
+# CALLBACK DE SIMULACION
+# ==========================
+@app.callback(
+    Output("grafico-impacto-co2", "figure"),
+    Input("slider-renovables", "value")
+)
+def actualizar_simulacion(porcentaje_extra):
+    return fig_impacto_co2_colombia(df, porcentaje_extra)
+
+@app.callback(
+    Output("graph-renovables-comparacion", "figure"),
+    Input("dropdown-renovables-paises", "value")
+)
+def actualizar_grafico_renovables(paises_sel):
+    return fig_renovables_comparacion(paises_sel)
+
+
 
 # ==========================
 # MAIN

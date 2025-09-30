@@ -1,96 +1,73 @@
-/* assets/style.css */
-
-/* Fuente y fondo general */
+/* ======== GENERAL ======== */
 body {
     background-color: #f4f6f9;
     font-family: 'Segoe UI', Roboto, Arial, sans-serif;
-    color: #333;
     margin: 0;
     padding: 0;
+    color: #333;
 }
 
-/* Título */
-h1, h2, h3 {
+/* Títulos */
+h1, h2, h3, h4, h5 {
     font-weight: 600;
-    color: #2c3e50;
+    margin-bottom: 10px;
 }
 
-/* Tarjetas (cards) */
-.card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-    padding: 20px;
-    margin-bottom: 25px;
+/* ======== BANNER ======== */
+div[style*="backgroundColor: #003366"] {
+    box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
 }
 
-/* Gráficas */
-.js-plotly-plot {
-    border-radius: 10px;
-    background: #fff;
-    padding: 10px;
-}
-
-/* Tabs */
-.dash-tabs {
+/* ======== LAYOUT ======== */
+.row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
     margin-bottom: 20px;
 }
 
-.dash-tab {
-    background-color: #ecf0f1;
-    color: #2c3e50;
-    border-radius: 8px 8px 0 0;
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    flex: 1;
+    box-shadow: 0px 3px 8px rgba(0,0,0,0.15);
+}
+
+.card-text {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    flex: 1;
+    box-shadow: 0px 3px 8px rgba(0,0,0,0.1);
+    line-height: 1.6;
+}
+
+/* ======== TABS ======== */
+.tab--selected {
+    background-color: #fff !important;
+    border: 1px solid #ccc !important;
+    border-bottom: none !important;
+    font-weight: bold;
+}
+
+.tab {
+    background-color: #eaecef;
+    border: 1px solid #ccc;
+    border-radius: 6px 6px 0 0;
     padding: 12px 20px;
     margin-right: 5px;
-    border: none;
-    font-weight: 500;
-    transition: 0.2s;
+    cursor: pointer;
+    transition: all 0.2s ease;
 }
 
-.dash-tab--selected {
-    background-color: #3498db;
-    color: #fff;
+.tab:hover {
+    background-color: #dfe3e8;
 }
 
-/* Tab content */
-.dash-tab-content {
-    padding: 15px;
-}
-
-/* Tablas */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 15px 0;
-    font-size: 14px;
-}
-
-th, td {
-    padding: 10px;
-    text-align: left;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-th {
-    background-color: #3498db;
-    color: white;
-    font-weight: 600;
-    text-align: center;
-    text-transform: uppercase;
-}
-
-/* Scroll limpio */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-thumb {
-    background-color: #bbb;
-    border-radius: 4px;
-}
-
-.dash-table-container th {
-    background-color: #003366 !important;
-    color: white !important;
-    text-align: center;
+/* ======== DATA TABLES ======== */
+.dash-table-container .dash-spreadsheet-container {
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
 }
