@@ -204,7 +204,69 @@ def fig_co2_pie(paises_selec):
     return fig
 
 # ==========================
-# Pestaña 2: Problemática 2
+# Pestaña 3: Problemática 2
+# ==========================
+def fig_generacion_fuentes_colombia():
+    df_col = df[df["COUNTRY"] == "Colombia"]
+    df_col_matrx = df_col[df_col["PRODUCT"].isin(['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal'])]
+
+    pivot = df_col_matrx.groupby(['YEAR', 'PRODUCT'], as_index=False)['VALUE'].sum()
+
+    fig = px.line(
+        pivot,
+        x="YEAR",
+        y="VALUE",
+        color="PRODUCT",
+        markers=True,
+        title="Generación por Fuente a lo largo de los Años (Colombia)",
+        template="plotly_white"
+    )
+
+    fig.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Generación (GWh)",
+        title_x=0.5,
+        margin=dict(l=40, r=40, t=60, b=40),
+    )
+    return fig
+
+
+
+def fig_hydro_share_comparacion(paises_sel):
+    if not paises_sel:
+        return go.Figure()
+
+    df_sel = df[df["COUNTRY"].isin(paises_sel)]
+    df_hydro = df_sel[df_sel["PRODUCT"] == "Hydro"].copy()
+
+    if "share" not in df_hydro.columns:
+        # Calcular participación (%) si no existe
+        df_sel["total"] = df_sel.groupby(["COUNTRY", "YEAR"])["VALUE"].transform("sum")
+        df_hydro["share"] = df_hydro["VALUE"] / df_hydro["total"] * 100
+
+    df_combined_share = df_hydro.groupby(["COUNTRY", "YEAR"], as_index=False)["share"].sum()
+
+    fig = px.line(
+        df_combined_share,
+        x="YEAR",
+        y="share",
+        color="COUNTRY",
+        markers=True,
+        title="Participación de energía Hidroeléctrica en la matriz energética (Américas)",
+        template="plotly_white"
+    )
+
+    fig.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Participación (%)",
+        title_x=0.5,
+        margin=dict(l=40, r=40, t=60, b=40),
+    )
+    return fig
+
+
+# ==========================
+# Pestaña 4: Problemática 3
 # ==========================
 
 def fig_co2_total_colombia():
@@ -376,11 +438,31 @@ problem1_layout = html.Div([
 ])
 
 # ==========================
-# TAB 3: PROBLEMÁTICA 3
+# TAB 3: PROBLEMÁTICA 2
 # ==========================
 problem2_layout = html.Div([
-    html.H3("Problemática 2: Producción de CO₂ en Colombia")
+    html.H3("Problemática 2: Generación y comparación de energías"),
+    
+    # Gráfica de generación por fuente (Colombia)
+    html.Div([
+        dcc.Graph(figure=fig_generacion_fuentes_colombia())
+    ], style={'width': '90%', 'margin': 'auto'}),
+
+    # Gráfica de Hydro vs países
+    html.Div([
+        html.H4("Comparación participación hidroeléctrica"),
+        dcc.Dropdown(
+            id="dropdown-hydro-paises",
+            options=[{"label": p, "value": p} for p in paises],
+            value=["Colombia", "Argentina", "Brazil", "Chile"],  
+            multi=True,
+            style={'width': '80%', 'margin': 'auto'}
+        ),
+        dcc.Graph(id="hydro-share-comparacion")
+    ], style={'margin-top': '30px'})
 ])
+
+
 
 problem3_layout = html.Div([
     html.H3("Problemática 3"),
@@ -457,6 +539,13 @@ def actualizar_graficas(paises_seleccionados):
     fig1 = fig_co2_comparacion(paises_seleccionados)
     fig2 = fig_co2_pie(paises_seleccionados)
     return fig1, fig2
+
+@app.callback(
+    Output("hydro-share-comparacion", "figure"),
+    Input("dropdown-hydro-paises", "value")
+)
+def actualizar_hydro_share(paises_sel):
+    return fig_hydro_share_comparacion(paises_sel)
 
 # ==========================
 # MAIN
