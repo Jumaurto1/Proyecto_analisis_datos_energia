@@ -240,16 +240,14 @@ def fig_generacion_fuentes_colombia():
         y="VALUE",
         color="PRODUCT",
         markers=True,
-        title="Generación por Fuente a lo largo de los Años (Colombia)",
-        template="plotly_white"
+        title="Generación por Fuente a lo largo de los Años (Colombia)"
     )
 
     fig.update_layout(
         xaxis_title="Año",
         yaxis_title="Generación (GWh)",
-        title_x=0.5,
-        margin=dict(l=40, r=40, t=60, b=40),
-        height=500 
+        template="plotly_white",
+        height=500
     )
     return fig
 
@@ -273,15 +271,15 @@ def fig_hydro_share_comparacion(paises_sel):
         y="share",
         color="COUNTRY",
         markers=True,
-        title="Participación de energía Hidroeléctrica en la matriz energética (Américas)",
+        title="Participación de energía Hidroeléctrica en la matriz energética",
         template="plotly_white"
     )
 
     fig.update_layout(
         xaxis_title="Año",
         yaxis_title="Participación (%)",
-        title_x=0.5,
-        margin=dict(l=40, r=40, t=60, b=40),
+        template="plotly_white",
+        height=500
     )
     return fig
 
