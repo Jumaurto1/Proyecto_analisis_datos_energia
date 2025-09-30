@@ -279,42 +279,50 @@ exploracion_layout = html.Div([
 problem1_layout = html.Div([
     html.H3("Problemática 1: Emisiones y matriz energética en Colombia"),
     kpi_cards(),
-
-    # Primera fila: Área y Heatmap
+    
+    # Fila 1: Matriz y Heatmap
     html.Div([
         html.Div([dcc.Graph(figure=fig_matriz_area_colombia())], 
                  style={'width': '49%', 'display': 'inline-block'}),
         html.Div([dcc.Graph(figure=fig_heatmap_colombia())], 
                  style={'width': '49%', 'display': 'inline-block'})
     ]),
-
-    # Segunda fila: Solar vs Wind
+    
+    # Fila 2: Solar vs Wind + Texto explicativo
     html.Div([
         html.Div([dcc.Graph(figure=fig_solar_wind_line())], 
                  style={'width': '49%', 'display': 'inline-block'}),
-        html.Div([  # Comparación CO₂ pegada a la derecha
-            html.H4("Comparación CO₂ vs otros países"),
-            dcc.Dropdown(
-                id="dropdown-paises-co2",
-                options=[{"label": p, "value": p} for p in paises if p != "Colombia"],
-                multi=True,
-                placeholder="Seleccione países"
-            ),
-            dcc.Graph(id="co2-comparacion")
-        ], style={'width': '49%', 'display': 'inline-block'})
+        html.Div([
+            html.H5("Análisis de la matriz energética en Colombia"),
+            html.P("1. Matriz energética Colombia"),
+            html.P("Esta gráfica apilada nos muestra que cada capa de energía contribuye al total de electricidad generada en Colombia."),
+            html.Br(),
+            html.P("2. Heatmap sobre aporte en Colombia"),
+            html.P("Se observa que Colombia depende casi por completo de la energía hidroeléctrica. "
+                   "La implementación de otras energías renovables es ínfima, lo que indica que esta matriz energética es vulnerable; "
+                   "cualquier sequía fuerte (fenómeno del Niño) o inconvenientes técnicos puede comprometer la estabilidad energética "
+                   "porque no hay respaldo suficiente en materia de energías solar/eólica.")
+        ], style={'width': '40%', 'display': 'inline-block', 'verticalAlign': 'justify', 'padding': '50px'})
     ]),
-
-    # Tercera fila: Distribución CO₂
+    
+    # Fila 3: Filtro único + Gráficos CO₂
     html.Div([
-        html.H4("Distribución CO₂ por país"),
+        html.H4("Análisis de CO₂ por país"),
         dcc.Dropdown(
-            id="dropdown-paises-pastel",
+            id="dropdown-paises-unico",
             options=[{"label": p, "value": p} for p in paises],
+            value=["Colombia"],  
             multi=True,
-            placeholder="Seleccione países"
+            style={'width': '100%'}
         ),
-        dcc.Graph(id="co2-pie-chart")
-    ], style={'width': '100%', 'display': 'inline-block', 'margin-top': '20px'})
+        
+        html.Div([
+            html.Div([dcc.Graph(id="co2-comparacion")], 
+                     style={'width': '49%', 'display': 'inline-block'}),
+            html.Div([dcc.Graph(id="co2-pie-chart")], 
+                     style={'width': '49%', 'display': 'inline-block'})
+        ])
+    ], style={'margin-top': '20px'})
 ])
 
 # OTRAS TABS (sin modificar)
@@ -361,18 +369,14 @@ def render_tab(tab):
 # CALLBACKS GRÁFICAS
 # ==========================
 @app.callback(
-    Output("co2-comparacion", "figure"),
-    Input("dropdown-paises-co2", "value")
+    [Output("co2-comparacion", "figure"),
+     Output("co2-pie-chart", "figure")],
+    [Input("dropdown-paises-unico", "value")]
 )
-def actualizar_co2(paises_selec):
-    return fig_co2_comparacion(paises_selec)
-
-@app.callback(
-    Output("co2-pie-chart", "figure"),
-    Input("dropdown-paises-pastel", "value")
-)
-def actualizar_pie(paises_selec):
-    return fig_co2_pie(paises_selec)
+def actualizar_graficas(paises_seleccionados):
+    fig1 = fig_co2_comparacion(paises_seleccionados)
+    fig2 = fig_co2_pie(paises_seleccionados)
+    return fig1, fig2
 
 # ==========================
 # MAIN
