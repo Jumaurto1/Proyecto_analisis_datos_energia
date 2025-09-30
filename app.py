@@ -249,6 +249,7 @@ def fig_generacion_fuentes_colombia():
         yaxis_title="Generación (GWh)",
         title_x=0.5,
         margin=dict(l=40, r=40, t=60, b=40),
+        height=500 
     )
     return fig
 
