@@ -4,6 +4,7 @@ import dash
 from dash import dcc, html, dash_table, Input, Output
 import plotly.graph_objects as go
 import plotly.express as px
+import numpy as np
 
 # ==========================
 # CARGA DE DATOS
@@ -32,13 +33,12 @@ server = app.server
 # CALCULAR EMISIONES CO2
 # ==========================
 COEF_MAP = {
-    'coal': 2.20,
-    'oil': 2.10,
-    'natural gas': 1.60,
-    'natural': 1.60,
-    'hydro': 0.0,
-    'wind': 0.0,
-    'solar': 0.0
+    'coal': 0.99790,
+    'oil': 0.95254,
+    'natural gas': 0.40823,
+    'hydro': 0.04536,
+    'wind': 0.01361,
+    'solar': 0.05670
 }
 
 def map_co2_coef(product):
@@ -52,6 +52,8 @@ def map_co2_coef(product):
 
 df["COEF"] = df["PRODUCT"].apply(map_co2_coef)
 df["CO2_PRODUCTION"] = df["VALUE"] * df["COEF"]
+
+
 
 
 # ==========================
@@ -68,9 +70,9 @@ banner = html.Div(
         "padding": "10px 30px",
     },
     children=[
-        html.Img(src="/assets/TALENTO-TECH-EDUCACIO-TECNOLOGIA.png", style={"height": "60px"}),
+        html.Img(src="/assets/Talento_Tech_Logo.png", style={"height": "60px"}),
         html.H1(
-            "Factores claves para la transición energética en Colombia",
+            "Colombia en transición: Retos y oportunidades de la matriz energética (2014-2012)",
             style={"color": "white", "textAlign": "center", "flex": "1", "margin": "0"}
         ),
         html.Img(src="/assets/Logo.png", style={"height": "60px"}),
@@ -79,6 +81,9 @@ banner = html.Div(
 
 # ==========================
 # FUNCIONES DE FIGURAS
+# ==========================
+# ==========================
+# Pestaña 2: Problemática 1
 # ==========================
 def fig_matriz_area_colombia():
     df_col = df[df["COUNTRY"] == "Colombia"]
@@ -199,6 +204,68 @@ def fig_co2_pie(paises_selec):
     return fig
 
 # ==========================
+# Pestaña 2: Problemática 2
+# ==========================
+
+def fig_co2_total_colombia():
+    df_col_matrx = df[df["COUNTRY"] == "Colombia"]
+    df_totprod_CO2 = df_col_matrx.groupby(['YEAR','COUNTRY'])['CO2_PRODUCTION'].sum().reset_index()
+
+    fig = px.line(
+        df_totprod_CO2,
+        x="YEAR",
+        y="CO2_PRODUCTION",
+        markers=True,
+        title="Producción total de CO₂ en Colombia por año",
+        template="plotly_white"
+    )
+    fig.update_layout(
+        xaxis_title="Año",
+        yaxis_title="Toneladas de CO₂",
+        title_x=0.5,
+        margin=dict(l=40, r=40, t=60, b=40),
+    )
+    return fig
+
+#headmap co2 colombia
+def fig_heatmap_co2_colombia():
+    df_col = df[df["COUNTRY"] == "Colombia"]
+    products_order = ['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal']
+    
+    heatmap_co2 = (
+        df_col[df_col["PRODUCT"].isin(products_order)]
+        .groupby(['YEAR', 'PRODUCT'])['CO2_PRODUCTION']
+        .sum()
+        .reset_index()
+    )
+    
+    pivot_co2 = heatmap_co2.pivot(index='PRODUCT', columns='YEAR', values='CO2_PRODUCTION')
+    pivot_co2 = pivot_co2.loc[products_order]  # ordenamos las filas
+    
+    fig = px.imshow(
+        pivot_co2.values,
+        x=[str(c) for c in pivot_co2.columns],
+        y=pivot_co2.index,
+        text_auto=".0f",
+        color_continuous_scale="Reds",
+        aspect="auto",
+        labels={"x": "Año", "y": "Fuente energética", "color": "Emisiones de CO₂ (ton)"},
+        title="Emisiones anuales de CO₂ por fuente energética en Colombia (2014-2022)"
+    )
+    
+    fig.update_layout(
+        title_x=0.5,
+        margin=dict(l=40, r=40, t=60, b=40),
+        template="plotly_white"
+    )
+    
+    return fig
+
+
+
+
+
+# ==========================
 # FUNCIONES KPI
 # ==========================
 def kpi_cards():
@@ -237,6 +304,11 @@ table_header_style = {
 }
 
 exploracion_layout = html.Div([
+    html.H3("Motivo del proyecto:"),     
+    html.P("Seleccionamos esta base de datos con el propósito de identificar la evolución y la participación relativa de las fuentes de energía "
+           "carbón, petróleo y gas natural) para Colombia entre los años 2014 y 2022,"
+           "con el fin de reconocer tendencias, fortalezas y desafíos hacia una transición energética equilibrada para Colombia"
+           "y compararlos en relación a otros países."),
     html.H3("Exploración del Dataset"),
 
     html.H4("Dataset completo"),
@@ -267,10 +339,7 @@ exploracion_layout = html.Div([
         page_size=20,
         style_table={"overflowX": "auto"},
         style_header=table_header_style,
-    ),
-
-    html.H4("Países disponibles en el Dataset"),
-    html.Ul([html.Li(p) for p in paises])
+    )
 ])
 
 # ==========================
@@ -303,9 +372,24 @@ problem1_layout = html.Div([
                    "cualquier sequía fuerte (fenómeno del Niño) o inconvenientes técnicos puede comprometer la estabilidad energética "
                    "porque no hay respaldo suficiente en materia de energías solar/eólica.")
         ], style={'width': '40%', 'display': 'inline-block', 'verticalAlign': 'justify', 'padding': '50px'})
-    ]),
-    
-    # Fila 3: Filtro único + Gráficos CO₂
+    ])
+])
+
+# ==========================
+# TAB 3: PROBLEMÁTICA 3
+# ==========================
+problem2_layout = html.Div([
+    html.H3("Problemática 2: Producción de CO₂ en Colombia")
+])
+
+problem3_layout = html.Div([
+    html.H3("Problemática 3"),
+    html.Div([
+        dcc.Graph(figure=fig_co2_total_colombia())
+    ], style={'width': '80%', 'margin': 'auto'}),
+    html.Div([
+        dcc.Graph(figure=fig_heatmap_co2_colombia())
+    ], style={'width': '90%', 'margin': 'auto'}),
     html.Div([
         html.H4("Análisis de CO₂ por país"),
         dcc.Dropdown(
@@ -324,10 +408,6 @@ problem1_layout = html.Div([
         ])
     ], style={'margin-top': '20px'})
 ])
-
-# OTRAS TABS (sin modificar)
-problem2_layout = html.Div([html.H3("Problemática 2")])
-problem3_layout = html.Div([html.H3("Problemática 3")])
 problem4_layout = html.Div([html.H3("Problemática 4")])
 
 # ==========================
