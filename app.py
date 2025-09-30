@@ -980,16 +980,16 @@ footer = html.Div(
         # Sección blanca con contenido
         html.Div(
             children=[
-                html.P(
+                html.H1(
                     "Juan Manuel Urbano Torres | Juan Miguel Elejalde García | Yicely Díaz Tapias",
-                    style={"marginBottom": "15px", "fontSize": "15px", "fontWeight": "500"},
+                    style={"color": "black", "textAlign": "center", "flex": "1", "margin": "0"}
                 ),
                 html.Div(
                     [
                         html.Img(src="/assets/UTraining.png", style={"height": "60px", "margin": "0 20px"}),
                         html.Img(src="/assets/udea.png", style={"height": "60px", "margin": "0 20px"}),
-                        html.Img(src="/assets/udecaldas.png", style={"height": "60px", "margin": "0 20px"}),
-                        html.Img(src="/assets/ubicua.png", style={"height": "60px", "margin": "0 20px"}),
+                        html.Img(src="/assets/udecaldas.png", style={"height": "100px", "margin": "0 20px"}),
+                        html.Img(src="/assets/ubicua.png", style={"height": "90px", "margin": "0 20px"}),
                     ],
                     style={"display": "flex", "justifyContent": "center", "alignItems": "center"},
                 ),
