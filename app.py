@@ -70,7 +70,7 @@ banner = html.Div(
     children=[
         html.Img(src="/assets/Talento_Tech_Logo.png", style={"height": "60px"}),
         html.H1(
-            "Colombia en transición: Retos y oportunidades de la matriz energética (2014-2012)",
+            "Colombia en transición: Retos y oportunidades de la matriz energética (2014-2022)",
             style={"color": "white", "textAlign": "center", "flex": "1", "margin": "0"}
         ),
         html.Img(src="/assets/Logo.png", style={"height": "60px"}),
@@ -644,13 +644,33 @@ def kpi_cards2():
     ], className="row", style={"marginBottom": "20px"})
 
 # ==========================
-# TAB 1: EXPLORACIÓN (estilizada)
+# COMMON STYLE CONSTANTS
 # ==========================
 table_header_style = {
     "backgroundColor": BANNER_COLOR,
     "color": "white",
     "fontWeight": "bold",
     "textTransform": "uppercase"
+}
+
+card_style = {
+    "padding": "20px",
+    "marginBottom": "20px",
+    "boxSizing": "border-box"
+}
+
+flex_row_style = {
+    "display": "flex",
+    "gap": "20px",
+    "marginBottom": "30px",
+    "flexWrap": "wrap",
+    "alignItems": "stretch"
+}
+
+full_width_card_style = {
+    "width": "100%",
+    "marginBottom": "30px",
+    "padding": "10px"
 }
 
 # columnas que vamos a eliminar en la tabla de Colombia
@@ -771,18 +791,20 @@ problem1_layout = html.Div([
 # TAB 3: PROBLEMÁTICA 2 (estilizada)
 # ==========================
 problem2_layout = html.Div([
+    # Título principal
     html.H3(
         "¿Qué tan riesgosa es la sobredependencia de hidro comparada con otros países y qué alternativas energéticas se han explorado?",
         style={"textAlign": "center", "marginBottom": "20px"}
     ),
 
+    # KPIs
     kpi_cards2(),
 
     # Gráfica de línea mensual
     html.Div(
         [dcc.Graph(figure=fig_line_matriz())],
         className="card",
-        style={"width": "100%", "marginBottom": "30px"}
+        style=full_width_card_style
     ),
 
     # Fila 1: Generación años por fuente + Comparación hidro
@@ -794,7 +816,7 @@ problem2_layout = html.Div([
                 dcc.Graph(figure=fig_generacion_fuentes_colombia())
             ],
             className="card",
-            style={"flex": "1", "padding": "10px"}
+            style={"flex": "1 1 0", "padding": "10px", "minWidth": "300px", "boxSizing": "border-box"}
         ),
 
         # Segunda gráfica
@@ -806,37 +828,68 @@ problem2_layout = html.Div([
                     options=[{"label": p, "value": p} for p in paises],
                     value=["Colombia", "Argentina", "Brazil", "Chile"],
                     multi=True,
-                    style={'width': '90%', 'margin': '10px auto'}
+                    style={'width': '95%', 'margin': '10px auto', 'maxWidth': '400px'}
                 ),
                 dcc.Graph(id="hydro-share-comparacion")
             ],
             className="card",
-            style={"flex": "1", "padding": "10px"}
+            style={"flex": "1 1 0", "padding": "10px", "minWidth": "300px", "boxSizing": "border-box"}
         ),
-    ], style={"display": "flex", "gap": "20px", "marginBottom": "30px"}),
-    # recomendaciones y conclusiones
+    ],
+        style={
+            "display": "flex",
+            "gap": "20px",
+            "marginBottom": "30px",
+            "flexWrap": "wrap",
+            "alignItems": "stretch"
+        }
+    ),
+
+    # Fila 2: Conclusiones y Recomendaciones
     html.Div([
         # Conclusiones
         html.Div([
             html.H4("Conclusiones Problemática 2"),
             html.H5("Energías renovables no convencionales con avances desiguales"),
-            html.P("La energía solar mostró un crecimiento acelerado desde 2018, superando en pocos años los 450 GWh. En contraste, la eólica se " \
-            "mantuvo estancada por limitaciones estructurales y logísticas, a pesar del alto potencial en regiones como La Guajira. Esto refleja una " \
-            "asimetría en el desarrollo de energías renovables no convencionales en el país."),
-        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
+            html.P(
+                "La energía solar mostró un crecimiento acelerado desde 2018, superando en pocos años los 450 GWh. "
+                "En contraste, la eólica se mantuvo estancada por limitaciones estructurales y logísticas, "
+                "a pesar del alto potencial en regiones como La Guajira. Esto refleja una asimetría en el desarrollo "
+                "de energías renovables no convencionales en el país."
+            ),
+        ],
+            className="card",
+            style={"flex": "1 1 0", "padding": "20px", "textAlign": "justify", "minWidth": "300px", "boxSizing": "border-box"}
+        ),
 
-        # Segunda gráfica
+        # Recomendaciones
         html.Div([
             html.H4("Recomendaciones Problemática 2"),
             html.H5("1. Alianzas regionales e internacionales"),
-            html.P("Aprovechar experiencias exitosas de países como Chile, Dinamarca o Costa Rica para adaptar buenas prácticas regulatorias y tecnológicas que aceleren la transición energética en Colombia."),
+            html.P(
+                "Aprovechar experiencias exitosas de países como Chile, Dinamarca o Costa Rica para adaptar buenas prácticas "
+                "regulatorias y tecnológicas que aceleren la transición energética en Colombia."
+            ),
             html.H5("2. Impulso a proyectos eólicos en regiones estratégicas"),
-            html.P("Superar barreras sociales, logísticas y ambientales en zonas de alto potencial, como La Guajira, mediante procesos de concertación " \
-            "con comunidades locales, infraestructura adecuada y marcos normativos claros.")
-        ], className="card", style={"flex": "1",  "textAlign": "justify", "padding": "20px"}
+            html.P(
+                "Superar barreras sociales, logísticas y ambientales en zonas de alto potencial, como La Guajira, "
+                "mediante procesos de concertación con comunidades locales, infraestructura adecuada y marcos normativos claros."
+            )
+        ],
+            className="card",
+            style={"flex": "1 1 0", "padding": "20px", "textAlign": "justify", "minWidth": "300px", "boxSizing": "border-box"}
         ),
-    ], style={"display": "flex", "gap": "20px", "marginBottom": "30px"})
+    ],
+        style={
+            "display": "flex",
+            "gap": "20px",
+            "marginBottom": "30px",
+            "flexWrap": "wrap",
+            "alignItems": "stretch"
+        }
+    )
 ])
+
 
 
 # ==========================
