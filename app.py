@@ -798,35 +798,28 @@ problem2_layout = html.Div([
     # KPIs
     kpi_cards2(),
 
-    # Gráfica de línea mensual
+    # Gráfica de línea matriz energética
     html.Div([dcc.Graph(figure=fig_line_matriz())],
              className="card",
-             style={"padding": "20px"}
-    ),
-
-    # Fila 1: Generación años por fuente + Comparación hidro
-    html.Div([
-        html.Div([
+             style=full_width_card_style),
+    html.Div([  # Primera gráfica
             html.H3("Generación años por fuente en Colombia (2014-2022)"),
             dcc.Graph(figure=fig_generacion_fuentes_colombia())
-        ], className="card", style={"flex": "1", "padding": "20px", "textAlign": "center"}),
-
-        html.Div([
-            html.H3("Comparación participación hidroeléctrica", style={"marginTop": "0px", "textAlign": "center"}),
+        ], className="card", style={"flex": "1"}),
+    html.Div([  # Segunda gráfica
+            html.H3("Comparación participación hidroeléctrica", style={"marginTop": "0px"}),
             dcc.Dropdown(
                 id="dropdown-hydro-paises",
                 options=[{"label": p, "value": p} for p in paises],
                 value=["Colombia", "Argentina", "Brazil", "Chile"],
                 multi=True,
-                style={'width': '90%', 'margin': '10px auto', 'maxWidth': '400px'}
+                style={'width': '95%', 'margin': '10px auto', 'maxWidth': '400px'}
             ),
             dcc.Graph(id="hydro-share-comparacion")
-        ], className="card", style={"flex": "1", "padding": "20px", "textAlign": "center"})
-    ], style={"display": "flex", "gap": "20px", "flexWrap": "wrap", "marginBottom": "30px"}),
-
-    # Fila 2: Conclusiones y Recomendaciones
+        ], className="card", style={"flex": "1"}),
+    # Conclusiones y Recomendaciones
     html.Div([
-        html.Div([
+        html.Div([  # Conclusiones
             html.H4("Conclusiones Problemática 2"),
             html.H5("Energías renovables no convencionales con avances desiguales"),
             html.P(
@@ -835,9 +828,9 @@ problem2_layout = html.Div([
                 "a pesar del alto potencial en regiones como La Guajira. Esto refleja una asimetría en el desarrollo "
                 "de energías renovables no convencionales en el país."
             ),
-        ], className="card", style={"flex": "1", "padding": "20px", "textAlign": "justify"}),
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
 
-        html.Div([
+        html.Div([  # Recomendaciones
             html.H4("Recomendaciones Problemática 2"),
             html.H5("1. Alianzas regionales e internacionales"),
             html.P(
@@ -849,11 +842,13 @@ problem2_layout = html.Div([
                 "Superar barreras sociales, logísticas y ambientales en zonas de alto potencial, como La Guajira, "
                 "mediante procesos de concertación con comunidades locales, infraestructura adecuada y marcos normativos claros."
             )
-        ], className="card", style={"flex": "1", "padding": "20px", "textAlign": "justify"})
-    ], style={"display": "flex", "gap": "20px", "flexWrap": "wrap", "marginBottom": "30px"})
-], style={"display": "flex", "flexDirection": "column", "gap": "15px"})
-
-
+        ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
+    ],
+        style={"display": "flex", "gap": "20px", "marginBottom": "20px"}
+    )
+],
+    style={"display": "flex", "flexDirection": "column", "gap": "15px"}
+)
 
 
 # ==========================
