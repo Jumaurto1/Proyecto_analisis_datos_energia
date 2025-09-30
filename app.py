@@ -54,8 +54,6 @@ df["COEF"] = df["PRODUCT"].apply(map_co2_coef)
 df["CO2_PRODUCTION"] = df["VALUE"] * df["COEF"]
 
 
-
-
 # ==========================
 # ESTILO BANNER
 # ==========================
@@ -80,10 +78,7 @@ banner = html.Div(
 )
 
 # ==========================
-# FUNCIONES DE FIGURAS
-# ==========================
-# ==========================
-# Pestaña 2: Problemática 1
+# FUNCIONES DE FIGURAS (SIN CAMBIOS en la lógica)
 # ==========================
 def fig_matriz_area_colombia():
     df_col = df[df["COUNTRY"] == "Colombia"]
@@ -105,55 +100,36 @@ def fig_matriz_area_colombia():
     return fig
 
 def fig_heatmap_colombia():
-    df_col = df[df["COUNTRY"] == "Colombia"]
-    products_order = ['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal']
-    df_col_matrx = df_col[df_col['PRODUCT'].isin(products_order)].copy()
+    # Filtrar datos de Colombia y solo los productos relevantes
+    productos_validos = ["Hydro", "Solar", "Wind", "Natural gas", "Oil", "Coal"]
+    df_col = df[(df["COUNTRY"] == "Colombia") & (df["PRODUCT"].isin(productos_validos))]
 
-    # Preferir columna 'share' si existe y es numérica
-    if 'share' in df_col_matrx.columns and pd.api.types.is_numeric_dtype(df_col_matrx['share']):
-        df_col_matrx['share'] = pd.to_numeric(df_col_matrx['share'], errors='coerce')
-    else:
-        # Calcular share (%) por año
-        df_col_matrx['share'] = df_col_matrx.groupby('YEAR')['VALUE'].transform(lambda x: x / x.sum() * 100)
+    # Crear matriz: productos vs años con % (share * 100)
+    df_pivot_share = df_col.pivot_table(
+        index="PRODUCT",
+        columns="YEAR",
+        values="share",
+        aggfunc="mean"
+    ) * 100  # <-- convertir a porcentaje
 
-    # Pivotear por PRODUCT x YEAR
-    df_pivot = df_col_matrx.pivot_table(index='PRODUCT', columns='YEAR', values='share', aggfunc='mean')
-
-    # Ordenar productos según la participación promedio (de mayor a menor)
-    order = df_pivot.mean(axis=1).sort_values(ascending=False).index
-    df_pivot = df_pivot.loc[order]
-
-    # Round para presentación (4 decimales)
-    df_pivot = df_pivot.round(4)
-
-    if df_pivot.empty:
-        fig = go.Figure()
-        fig.update_layout(title="No hay datos disponibles para el heatmap (Colombia)")
-        return fig
-
-    # Construir heatmap
+    # Crear heatmap
     fig = px.imshow(
-        df_pivot.values,
-        x=[str(y) for y in df_pivot.columns],
-        y=df_pivot.index,
-        text_auto=".4f",  # valores con 4 decimales
-        color_continuous_scale="YlGnBu",
+        df_pivot_share,
+        labels=dict(x="Año", y="Fuente energética", color="Participación (%)"),
+        x=df_pivot_share.columns,
+        y=df_pivot_share.index,
+        text_auto=".1f",  # Mostrar valores con un decimal
         aspect="auto",
-        labels={'x': 'Año', 'y': 'Fuente energética', 'color': 'Participación (%)'},
-        title=f"Participación promedio anual de cada fuente energética en Colombia ({min_YEAR}-{max_YEAR})"
+        color_continuous_scale="YlGnBu"
     )
 
-    # Hover con más precisión
-    if fig.data:
-        fig.data[0].hovertemplate = 'Fuente: %{y}<br>Año: %{x}<br>Share: %{z:.4f}%<extra></extra>'
-
+    # Mejorar layout
     fig.update_layout(
+        title="Matriz energética anual en Colombia por fuente (2014-2050)",
         title_x=0.5,
         margin=dict(l=40, r=40, t=60, b=40),
-        xaxis_title="Año",
-        yaxis_title="Fuente energética",
-        template="plotly_white"
     )
+
     return fig
 
 def fig_solar_wind_line():
@@ -190,6 +166,7 @@ def fig_co2_comparacion(paises_selec):
     )
     fig.update_layout(title_x=0.5, margin=dict(l=40, r=40, t=60, b=40))
     return fig
+
 def fig_co2_pie(paises_selec):
     if not paises_selec:
         return go.Figure()
@@ -230,8 +207,6 @@ def fig_generacion_fuentes_colombia():
     )
     return fig
 
-
-
 def fig_hydro_share_comparacion(paises_sel):
     if not paises_sel:
         return go.Figure()
@@ -264,11 +239,9 @@ def fig_hydro_share_comparacion(paises_sel):
     )
     return fig
 
-
 # ==========================
 # Pestaña 4: Problemática 3
 # ==========================
-
 def fig_co2_total_colombia():
     df_col_matrx = df[df["COUNTRY"] == "Colombia"]
     df_totprod_CO2 = df_col_matrx.groupby(['YEAR','COUNTRY'])['CO2_PRODUCTION'].sum().reset_index()
@@ -289,7 +262,7 @@ def fig_co2_total_colombia():
     )
     return fig
 
-#headmap co2 colombia
+# headmap co2 colombia
 def fig_heatmap_co2_colombia():
     df_col = df[df["COUNTRY"] == "Colombia"]
     products_order = ['Hydro', 'Solar', 'Wind', 'Natural gas', 'Oil', 'Coal']
@@ -324,9 +297,8 @@ def fig_heatmap_co2_colombia():
     return fig
 
 # ==========================
-# FUNCION DE SIMULACION
+# FUNCION DE SIMULACION (y figuras relacionadas)
 # ==========================
-
 def simular_reduccion_emisiones(aumento_pct=20):
     df_col = df[df["COUNTRY"] == "Colombia"].copy()
 
@@ -348,7 +320,6 @@ def simular_reduccion_emisiones(aumento_pct=20):
 
     return base
 
-
 def fig_simulacion():
     df_sim = simular_reduccion_emisiones(20)  # fijo en +20%
     fig = go.Figure()
@@ -366,7 +337,6 @@ def fig_simulacion():
         title_x=0.5
     )
     return fig
-
 
 def simular_impacto_co2_colombia(df, porcentaje_extra=0.2):
     """
@@ -509,27 +479,24 @@ def fig_heatmap_matriz():
 # ==========================
 # Pestaña 5: Problemática 4
 # ==========================
-
 def fig_renovables_comparacion(paises_sel):
-    paises = ['Argentina', 'Brazil', 'Canada', 'Chile', 'Colombia', 
-              'Costa Rica', 'Mexico', 'United States']
-    
-    df_col_OECD_Am = df[df['COUNTRY'].isin(paises)]
-    df_col_OECD_Am_comp = df_col_OECD_Am[df_col_OECD_Am['PRODUCT'].isin(['Hydro','Wind','Solar','Geothermal'])]
+    # Filtrar el dataframe por los países seleccionados en el dropdown
+    df_selected = df[df['COUNTRY'].isin(paises_sel)]
 
-    # aporte combinado de renovables
-    df_combined_share = df_col_OECD_Am_comp.groupby(['COUNTRY','YEAR'], as_index=False)['share'].sum()
+    # Solo energías renovables
+    df_selected = df_selected[df_selected['PRODUCT'].isin(['Hydro','Wind','Solar','Geothermal'])]
 
-    # filtrar por países seleccionados
-    df_filtered = df_combined_share[df_combined_share["COUNTRY"].isin(paises_sel)]
+    # Calcular el aporte combinado de renovables
+    df_combined_share = df_selected.groupby(['COUNTRY','YEAR'], as_index=False)['share'].sum()
 
+    # Gráfica
     fig = px.line(
-        df_filtered,
+        df_combined_share,
         x="YEAR",
         y="share",
         color="COUNTRY",
         markers=True,
-        title="Participación de energías renovables en la Matriz Energética por País (Américas)",
+        title="Participación de energías renovables en la Matriz Energética por País",
         template="plotly_white"
     )
 
@@ -544,35 +511,51 @@ def fig_renovables_comparacion(paises_sel):
 
 
 # ==========================
-# FUNCIONES KPI
+# FUNCIONES KPI 
 # ==========================
 def kpi_cards():
-    df_col = df[df["COUNTRY"] == "Colombia"]
-    total_co2 = df_col[df_col["PRODUCT"].str.upper().isin(["CO2", "CO₂"])]["VALUE"].sum()
-    total_generacion = df_col["VALUE"].sum()
-    renovables = df_col[df_col["PRODUCT"].isin(["Solar", "Wind"])]["VALUE"].sum()
-    porcentaje_renovables = (renovables / total_generacion * 100) if total_generacion > 0 else 0
-    ano_max_gen = int(df_col.groupby("YEAR")["VALUE"].sum().idxmax()) if not df_col.empty else None
+    df_col = df[df["COUNTRY"] == "Colombia"].copy()
 
-    style_card = {
-        "border": "1px solid #ccc",
-        "border-radius": "5px",
-        "padding": "20px",
-        "margin": "5px",
-        "flex": "1",
-        "background-color": "#f9f9f9",
-        "textAlign": "center"
-    }
+    # Filtrar solo productos energéticos
+    productos_energia = ["Hydro", "Wind", "Solar", "Geothermal", "Natural gas", "Oil", "Coal"]
+    df_energia = df_col[df_col["PRODUCT"].isin(productos_energia)]
+
+    # Agregar energía por año y producto (para evitar duplicados por mes)
+    df_year_prod = df_energia.groupby(["YEAR", "PRODUCT"], as_index=False)["VALUE"].sum()
+
+    # Total de energía producida (2014-2022)
+    total_generacion = df_year_prod.groupby("YEAR")["VALUE"].sum().sum()
+
+    # Total Hydro
+    total_hydro = df_year_prod[df_year_prod["PRODUCT"] == "Hydro"]["VALUE"].sum()
+
+    # Porcentaje Hydro
+    pct_hydro = (total_hydro / total_generacion * 100) if total_generacion > 0 else 0
+
+    # Año de mayor y menor generación Hydro
+    hydro_by_year = df_year_prod[df_year_prod["PRODUCT"] == "Hydro"].set_index("YEAR")["VALUE"]
+    año_max_hydro = int(hydro_by_year.idxmax()) if not hydro_by_year.empty else "N/A"
+    año_min_hydro = int(hydro_by_year.idxmin()) if not hydro_by_year.empty else "N/A"
 
     return html.Div([
-        html.Div([html.H4("Total CO₂ Colombia"), html.H3(f"{total_co2:,.0f}")], style=style_card),
-        html.Div([html.H4("% Energía Renovable"), html.H3(f"{porcentaje_renovables:.1f}%")], style=style_card),
-        html.Div([html.H4("Año Mayor Generación"), html.H3(f"{ano_max_gen}")], style=style_card),
-        html.Div([html.H4("Total Generación"), html.H3(f"{total_generacion:,.0f}")], style=style_card),
-    ], style={"display": "flex", "justifyContent": "space-around", "margin-bottom": "20px"})
+        html.Div([html.H4("Total Energía Producida (2014–2022)"), 
+                  html.H3(f"{total_generacion:,.0f} GWh")], className="card"),
+        
+        html.Div([html.H4("Producción Total Hydro (2014–2022)"), 
+                  html.H3(f"{total_hydro:,.0f} GWh")], className="card"),
+        
+        html.Div([html.H4("Participación Hydro en la Matriz"), 
+                  html.H3(f"{pct_hydro:.1f}%")], className="card"),
+        
+        html.Div([html.H4("Año de Mayor Generación Hydro"), 
+                  html.H3(f"{año_max_hydro}")], className="card"),
+        
+        html.Div([html.H4("Año de Menor Generación Hydro"), 
+                  html.H3(f"{año_min_hydro}")], className="card"),
+    ], className="row", style={"marginBottom": "20px"})
 
 # ==========================
-# TAB 1: EXPLORACIÓN
+# TAB 1: EXPLORACIÓN (estilizada)
 # ==========================
 table_header_style = {
     "backgroundColor": BANNER_COLOR,
@@ -582,63 +565,73 @@ table_header_style = {
 }
 
 exploracion_layout = html.Div([
-    html.H3("Motivo del proyecto:"),     
+    html.H3("Motivo del proyecto:", style={"textAlign": "center", "marginBottom": "10px"}),     
     html.P("Seleccionamos esta base de datos con el propósito de identificar la evolución y la participación relativa de las fuentes de energía "
-           "carbón, petróleo y gas natural) para Colombia entre los años 2014 y 2022,"
-           "con el fin de reconocer tendencias, fortalezas y desafíos hacia una transición energética equilibrada para Colombia"
-           "y compararlos en relación a otros países."),
-    html.H3("Exploración del Dataset"),
+           "(carbón, petróleo y gas natural) para Colombia entre los años 2014 y 2022, "
+           "con el fin de reconocer tendencias, fortalezas y desafíos hacia una transición energética equilibrada para Colombia "
+           "y compararlos en relación a otros países.",
+           style={"textAlign": "justify", "marginBottom": "20px"}),
+    html.H3("Exploración del Dataset", style={"textAlign": "center", "marginBottom": "10px"}),
 
-    html.H4("Dataset completo"),
-    dash_table.DataTable(
-        id="tabla-completa",
-        data=df.to_dict("records"),
-        columns=[{"name": c, "id": c} for c in df.columns],
-        page_size=20,
-        style_table={"overflowX": "auto"},
-        style_header=table_header_style,
-    ),
+    html.Div([
+        html.H4("Dataset completo"),
+        dash_table.DataTable(
+            id="tabla-completa",
+            data=df.to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df.columns],
+            page_size=20,
+            style_table={"overflowX": "auto"},
+            style_header=table_header_style,
+            style_data_conditional=[{
+                "if": {"row_index": "odd"},
+                "backgroundColor": "#f9f9f9"
+            }]
+        )
+    ], className="card"),
 
-    html.H4("Dataset - Solo Colombia"),
-    dash_table.DataTable(
-        id="tabla-colombia",
-        data=df[df["COUNTRY"] == "Colombia"].to_dict("records"),
-        columns=[{"name": c, "id": c} for c in df.columns],
-        page_size=20,
-        style_table={"overflowX": "auto"},
-        style_header=table_header_style,
-    ),
+    html.Div([
+        html.H4("Dataset - Solo Colombia"),
+        dash_table.DataTable(
+            id="tabla-colombia",
+            data=df[df["COUNTRY"] == "Colombia"].to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df.columns],
+            page_size=20,
+            style_table={"overflowX": "auto"},
+            style_header=table_header_style,
+        )
+    ], className="card"),
 
-    html.H4("Estadísticas de Colombia"),
-    dash_table.DataTable(
-        id="tabla-estadisticas",
-        data=df[df["COUNTRY"] == "Colombia"].describe().reset_index().to_dict("records"),
-        columns=[{"name": c, "id": c} for c in df[df["COUNTRY"] == "Colombia"].describe().reset_index().columns],
-        page_size=20,
-        style_table={"overflowX": "auto"},
-        style_header=table_header_style,
-    )
-])
+    html.Div([
+        html.H4("Estadísticas de Colombia"),
+        dash_table.DataTable(
+            id="tabla-estadisticas",
+            data=df[df["COUNTRY"] == "Colombia"].describe().reset_index().to_dict("records"),
+            columns=[{"name": c, "id": c} for c in df[df["COUNTRY"] == "Colombia"].describe().reset_index().columns],
+            page_size=20,
+            style_table={"overflowX": "auto"},
+            style_header=table_header_style,
+        )
+    ], className="card")
+], style={"gap": "20px", "display": "flex", "flexDirection": "column"})
 
 # ==========================
-# TAB 2: PROBLEMÁTICA 1
+# TAB 2: PROBLEMÁTICA 1 (estilizada)
 # ==========================
 problem1_layout = html.Div([
-    html.H3("Problemática 1: Emisiones y matriz energética en Colombia"),
+    html.H3("Problemática 1: Emisiones y matriz energética en Colombia",
+            style={"textAlign": "center", "marginBottom": "20px"}),
+
     kpi_cards(),
-    
+
     # Fila 1: Matriz y Heatmap
     html.Div([
-        html.Div([dcc.Graph(figure=fig_matriz_area_colombia())], 
-                 style={'width': '49%', 'display': 'inline-block'}),
-        html.Div([dcc.Graph(figure=fig_heatmap_colombia())], 
-                 style={'width': '49%', 'display': 'inline-block'})
-    ]),
-    
+        html.Div([dcc.Graph(figure=fig_matriz_area_colombia())], className="card", style={"flex": "1"}),
+        html.Div([dcc.Graph(figure=fig_heatmap_colombia())], className="card", style={"flex": "1"})
+    ], style={"display": "flex", "gap": "20px", "marginBottom": "30px"}),
+
     # Fila 2: Solar vs Wind + Texto explicativo
     html.Div([
-        html.Div([dcc.Graph(figure=fig_solar_wind_line())], 
-                 style={'width': '49%', 'display': 'inline-block'}),
+        html.Div([dcc.Graph(figure=fig_solar_wind_line())], className="card", style={"flex": "1"}),
         html.Div([
             html.H5("Análisis de la matriz energética en Colombia"),
             html.P("1. Matriz energética Colombia"),
@@ -649,117 +642,174 @@ problem1_layout = html.Div([
                    "La implementación de otras energías renovables es ínfima, lo que indica que esta matriz energética es vulnerable; "
                    "cualquier sequía fuerte (fenómeno del Niño) o inconvenientes técnicos puede comprometer la estabilidad energética "
                    "porque no hay respaldo suficiente en materia de energías solar/eólica.")
-        ], style={'width': '40%', 'display': 'inline-block', 'verticalAlign': 'justify', 'padding': '50px'})
-    ])
+        ], className="card", style={"flex": "0.8", "textAlign": "justify", "padding": "20px"})
+    ], style={"display": "flex", "gap": "20px"})
 ])
 
 # ==========================
-# TAB 3: PROBLEMÁTICA 2
+# TAB 3: PROBLEMÁTICA 2 (estilizada)
 # ==========================
 problem2_layout = html.Div([
-    html.H3("Problemática 2: Generación y comparación de energías"),
-    
-    # Gráfica de generación por fuente (Colombia)
-    html.Div([
-        dcc.Graph(figure=fig_generacion_fuentes_colombia())
-    ], style={'width': '90%', 'margin': 'auto'}),
+    html.H3("Problemática 2: Generación y comparación de energías",
+            style={"textAlign": "center", "marginBottom": "20px"}),
 
-    # Gráfica de Hydro vs países
+    html.Div([dcc.Graph(figure=fig_generacion_fuentes_colombia())], className="card", style={"width": "100%"}),
+
     html.Div([
         html.H4("Comparación participación hidroeléctrica"),
         dcc.Dropdown(
             id="dropdown-hydro-paises",
             options=[{"label": p, "value": p} for p in paises],
-            value=["Colombia", "Argentina", "Brazil", "Chile"],  
+            value=["Colombia", "Argentina", "Brazil", "Chile"],
             multi=True,
-            style={'width': '80%', 'margin': 'auto'}
+            style={'width': '80%', 'margin': '10px auto'}
         ),
         dcc.Graph(id="hydro-share-comparacion")
-    ], style={'margin-top': '30px'})
+    ], className="card", style={"marginTop": "20px"})
 ])
 
-
-
+# ==========================
+# TAB 4: PROBLEMÁTICA 3 (estilizada)
+# ==========================
 problem3_layout = html.Div([
-    html.H3("Problemática 3"),
+    html.H3("Problemática 3", style={"textAlign": "center", "marginBottom": "20px"}),
+
     html.Div([
-        dcc.Graph(figure=fig_co2_total_colombia())
-    ], style={'width': '80%', 'margin': 'auto'}),
-    html.Div([
-        dcc.Graph(figure=fig_heatmap_co2_colombia())
-    ], style={'width': '90%', 'margin': 'auto'}),
+        html.Div([dcc.Graph(figure=fig_co2_total_colombia())], className="card", style={"flex": "1"}),
+        html.Div([dcc.Graph(figure=fig_heatmap_co2_colombia())], className="card", style={"flex": "1"})
+    ], style={"display": "flex", "gap": "20px", "marginBottom": "20px"}),
+
     html.Div([
         html.H4("Análisis de CO₂ por país"),
         dcc.Dropdown(
             id="dropdown-paises-unico",
             options=[{"label": p, "value": p} for p in paises],
-            value=["Colombia"],  
+            value=["Colombia"],
             multi=True,
-            style={'width': '100%'}
+            style={'width': '60%', 'margin': '10px auto'}
         ),
-        
         html.Div([
-            html.Div([dcc.Graph(id="co2-comparacion")], 
-                     style={'width': '49%', 'display': 'inline-block'}),
-            html.Div([dcc.Graph(id="co2-pie-chart")], 
-                     style={'width': '49%', 'display': 'inline-block'})
-        ])
-    ], style={'margin-top': '20px'}),
-    html.H3("Problemática 3: Simulación de reducción de emisiones"),
-    dcc.Graph(figure=fig_simulacion()),
-    html.H3("Problemática 4: Matriz energética anual en Colombia (2014–2050)"),
-    dcc.Graph(figure=fig_heatmap_matriz()),
-    html.H3("Simulación impacto Solar/Eólica en CO₂ (2014-2022)"),
+            html.Div([dcc.Graph(id="co2-comparacion")], className="card", style={"flex": "1"}),
+            html.Div([dcc.Graph(id="co2-pie-chart")], className="card", style={"flex": "1"})
+        ], style={"display": "flex", "gap": "20px"})
+    ], className="card"),
+
+    html.H3("Problemática 3: Simulación de reducción de emisiones", style={"marginTop": "30px"}),
+    html.Div([dcc.Graph(figure=fig_simulacion())], className="card"),
+
+    html.H3("Problemática 4: Matriz energética anual en Colombia (2014–2050)", style={"marginTop": "30px"}),
+    html.Div([dcc.Graph(figure=fig_heatmap_matriz())], className="card"),
+
+    html.H3("Simulación impacto Solar/Eólica en CO₂ (2014-2022)", style={"marginTop": "30px"}),
     html.Label("Seleccione porcentaje de incremento en Solar/Eólica"),
     dcc.Slider(
         id="slider-renovables",
         min=0.05, max=0.5, step=0.05,
         value=0.2,
-        marks={i/100: f"{i}%" for i in range(5, 55, 5)}
+        marks={i/100: f"{i}%" for i in range(5, 55, 5)},
+        updatemode="mouseup",
+        tooltip={"placement":"bottom", "always_visible":False}
     ),
-    dcc.Graph(id="grafico-impacto-co2")
-])
+    html.Div([dcc.Graph(id="grafico-impacto-co2")], className="card", style={"marginTop": "10px"})
+], style={"display": "flex", "flexDirection": "column", "gap": "15px"})
+
+# ==========================
+# TAB 5: PROBLEMÁTICA 4 
+# ==========================
 problem4_layout = html.Div([
-    html.H3("Problemática 4: Comparativa renovables en América"),
-    
+    html.H3("Problemática 4: Comparativa renovables en América", style={"textAlign": "center", "marginBottom": "10px"}),
+
     html.Div([
         html.Label("Selecciona los países:"),
         dcc.Dropdown(
             id="dropdown-renovables-paises",
-            options=[{"label": p, "value": p} for p in 
-                     ['Argentina', 'Brazil', 'Canada', 'Chile', 'Colombia', 
-                      'Costa Rica', 'Mexico', 'United States']],
-            value=["Colombia", "Brazil", "United States"],  # default
+            options=[{"label": p, "value": p} for p in sorted(df["COUNTRY"].unique())],
+            value=["Colombia", 'Argentina', 'Brazil', 'Canada', 'Chile',
+                      'Costa Rica', 'Mexico', 'United States'],  # default
             multi=True,
-            style={'width': '80%', 'margin': 'auto'}
+            style={'width': '80%', 'margin': '10px auto'}
         ),
-    ], style={'margin-bottom': '20px'}),
+    ], style={"textAlign": "center"}),
 
-    dcc.Graph(id="graph-renovables-comparacion")
+    html.Div([dcc.Graph(id="graph-renovables-comparacion")], className="card", style={"marginTop": "10px"})
 ])
+
+# ==========================
+# FOOTER
+# ==========================
+# ==========================
+# FOOTER
+# ==========================
+footer = html.Div(
+    style={
+        "backgroundColor": "white",
+        "marginTop": "30px",
+        "padding": "0",
+        "borderTop": f"4px solid {BANNER_COLOR}",
+        "boxShadow": "0 -2px 6px rgba(0,0,0,0.1)",
+    },
+    children=[
+        # Encabezado con fondo azul
+        html.Div(
+            "Autores",
+            style={
+                "backgroundColor": BANNER_COLOR,
+                "color": "white",
+                "padding": "10px",
+                "fontWeight": "bold",
+                "fontSize": "18px",
+                "textAlign": "center",
+            },
+        ),
+
+        # Sección blanca con contenido
+        html.Div(
+            children=[
+                html.P(
+                    "Juan Manuel Urbano Torres | Juan Miguel Elejalde García | Yiceli Díaz",
+                    style={"marginBottom": "15px", "fontSize": "15px", "fontWeight": "500"},
+                ),
+                html.Div(
+                    [
+                        html.Img(src="/assets/UTraining.png", style={"height": "60px", "margin": "0 20px"}),
+                        html.Img(src="/assets/udea.png", style={"height": "60px", "margin": "0 20px"}),
+                        html.Img(src="/assets/udecaldas.png", style={"height": "60px", "margin": "0 20px"}),
+                        html.Img(src="/assets/ubicua.png", style={"height": "60px", "margin": "0 20px"}),
+                    ],
+                    style={"display": "flex", "justifyContent": "center", "alignItems": "center"},
+                ),
+            ],
+            style={"padding": "20px", "textAlign": "center"},
+        ),
+    ],
+)
 
 
 # ==========================
-# LAYOUT PRINCIPAL
+# LAYOUT PRINCIPAL 
 # ==========================
 app.layout = html.Div([
     banner,
-    dcc.Tabs(
-        id="tabs",
-        value="tab1",
-        children=[
-            dcc.Tab(label="Exploración", value="tab1"),
-            dcc.Tab(label="Problemática 1", value="tab2"),
-            dcc.Tab(label="Problemática 2", value="tab3"),
-            dcc.Tab(label="Problemática 3", value="tab4"),
-            dcc.Tab(label="Problemática 4", value="tab5"),
-        ]
+    html.Div(
+        dcc.Tabs(
+            id="tabs",
+            value="tab1",
+            children=[
+                dcc.Tab(label="Exploración", value="tab1", className="tab", selected_className="tab--selected"),
+                dcc.Tab(label="Problemática 1", value="tab2", className="tab", selected_className="tab--selected"),
+                dcc.Tab(label="Problemática 2", value="tab3", className="tab", selected_className="tab--selected"),
+                dcc.Tab(label="Problemática 3", value="tab4", className="tab", selected_className="tab--selected"),
+                dcc.Tab(label="Problemática 4", value="tab5", className="tab", selected_className="tab--selected"),
+            ]
+        ),
+        style={"width": "95%", "margin": "20px auto"}
     ),
-    html.Div(id="tabs-content")
+    html.Div(id="tabs-content", style={"width": "95%", "margin": "0 auto 60px auto"}),
+    footer
 ])
 
 # ==========================
-# CALLBACKS DE NAVEGACIÓN
+# CALLBACKS DE NAVEGACIÓN (igual que antes)
 # ==========================
 @app.callback(Output("tabs-content", "children"), Input("tabs", "value"))
 def render_tab(tab):
@@ -775,7 +825,7 @@ def render_tab(tab):
         return problem4_layout
 
 # ==========================
-# CALLBACKS GRÁFICAS
+# CALLBACKS GRÁFICAS (sin cambios)
 # ==========================
 @app.callback(
     [Output("co2-comparacion", "figure"),
@@ -810,8 +860,6 @@ def actualizar_simulacion(porcentaje_extra):
 )
 def actualizar_grafico_renovables(paises_sel):
     return fig_renovables_comparacion(paises_sel)
-
-
 
 # ==========================
 # MAIN
