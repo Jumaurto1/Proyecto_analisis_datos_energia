@@ -29,6 +29,32 @@ app = dash.Dash(__name__, suppress_callback_exceptions=True)
 server = app.server
 
 # ==========================
+# CALCULAR EMISIONES CO2
+# ==========================
+COEF_MAP = {
+    'coal': 2.20,
+    'oil': 2.10,
+    'natural gas': 1.60,
+    'natural': 1.60,
+    'hydro': 0.0,
+    'wind': 0.0,
+    'solar': 0.0
+}
+
+def map_co2_coef(product):
+    if pd.isna(product):
+        return 0.0
+    p = str(product).lower()
+    for key, coef in COEF_MAP.items():
+        if key in p:
+            return coef
+    return 0.0
+
+df["COEF"] = df["PRODUCT"].apply(map_co2_coef)
+df["CO2_PRODUCTION"] = df["VALUE"] * df["COEF"]
+
+
+# ==========================
 # ESTILO BANNER
 # ==========================
 BANNER_COLOR = "#003366"
@@ -144,15 +170,14 @@ def fig_solar_wind_line():
 def fig_co2_comparacion(paises_selec):
     if not paises_selec:
         return go.Figure()
-    # Aceptar 'CO2' o 'CO₂' según el dataset
-    df_co2 = df[df["PRODUCT"].str.upper().isin(["CO2", "CO₂"])]
-    df_fil = df_co2[df_co2["COUNTRY"].isin(paises_selec + ["Colombia"])]
-    if df_fil.empty:
+    d = df[df["COUNTRY"].isin(paises_selec + ["Colombia"])].copy()
+    if d.empty:
         return go.Figure()
+    by = d.groupby(["YEAR", "COUNTRY"], as_index=False)["CO2_PRODUCTION"].sum()
     fig = px.line(
-        df_fil.groupby(['YEAR','COUNTRY'], as_index=False)['VALUE'].sum(),
+        by,
         x="YEAR",
-        y="VALUE",
+        y="CO2_PRODUCTION",
         color="COUNTRY",
         markers=True,
         title="Comparación de emisiones de CO₂",
@@ -160,16 +185,15 @@ def fig_co2_comparacion(paises_selec):
     )
     fig.update_layout(title_x=0.5, margin=dict(l=40, r=40, t=60, b=40))
     return fig
-
 def fig_co2_pie(paises_selec):
     if not paises_selec:
         return go.Figure()
-    df_co2 = df[df["PRODUCT"].str.upper().isin(["CO2", "CO₂"])]
-    df_fil = df_co2[df_co2["COUNTRY"].isin(paises_selec)]
-    df_sum = df_fil.groupby("COUNTRY")["VALUE"].sum().reset_index()
-    if df_sum.empty:
+    d = df[df["COUNTRY"].isin(paises_selec)].copy()
+    agg = d.groupby("COUNTRY", as_index=False)["CO2_PRODUCTION"].sum()
+    if agg.empty:
         return go.Figure()
-    fig = px.pie(df_sum, names="COUNTRY", values="VALUE", title="Proporción de CO₂ por país", template="plotly_white")
+    fig = px.pie(agg, names="COUNTRY", values="CO2_PRODUCTION",
+                 title="Proporción de CO₂ por país", template="plotly_white")
     fig.update_traces(textposition="inside", textinfo="percent+label")
     fig.update_layout(title_x=0.5)
     return fig
@@ -255,13 +279,20 @@ exploracion_layout = html.Div([
 problem1_layout = html.Div([
     html.H3("Problemática 1: Emisiones y matriz energética en Colombia"),
     kpi_cards(),
+
+    # Primera fila: Área y Heatmap
     html.Div([
-        html.Div([dcc.Graph(figure=fig_matriz_area_colombia())], style={'width': '49%', 'display': 'inline-block'}),
-        html.Div([dcc.Graph(figure=fig_heatmap_colombia())], style={'width': '49%', 'display': 'inline-block'})
+        html.Div([dcc.Graph(figure=fig_matriz_area_colombia())], 
+                 style={'width': '49%', 'display': 'inline-block'}),
+        html.Div([dcc.Graph(figure=fig_heatmap_colombia())], 
+                 style={'width': '49%', 'display': 'inline-block'})
     ]),
+
+    # Segunda fila: Solar vs Wind
     html.Div([
-        html.Div([dcc.Graph(figure=fig_solar_wind_line())], style={'width': '49%', 'display': 'inline-block'}),
-        html.Div([
+        html.Div([dcc.Graph(figure=fig_solar_wind_line())], 
+                 style={'width': '49%', 'display': 'inline-block'}),
+        html.Div([  # Comparación CO₂ pegada a la derecha
             html.H4("Comparación CO₂ vs otros países"),
             dcc.Dropdown(
                 id="dropdown-paises-co2",
@@ -272,6 +303,8 @@ problem1_layout = html.Div([
             dcc.Graph(id="co2-comparacion")
         ], style={'width': '49%', 'display': 'inline-block'})
     ]),
+
+    # Tercera fila: Distribución CO₂
     html.Div([
         html.H4("Distribución CO₂ por país"),
         dcc.Dropdown(
@@ -281,7 +314,7 @@ problem1_layout = html.Div([
             placeholder="Seleccione países"
         ),
         dcc.Graph(id="co2-pie-chart")
-    ])
+    ], style={'width': '100%', 'display': 'inline-block', 'margin-top': '20px'})
 ])
 
 # OTRAS TABS (sin modificar)
