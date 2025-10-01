@@ -773,14 +773,9 @@ problem1_layout = html.Div([
             "significativas en la generación. En estos periodos, la dependencia de fuentes fósiles aumenta, lo que no solo reduce la seguridad " \
             "energética, sino que incrementa las emisiones de CO₂."),
             html.H4("Recomendaciones de la matriz energética en Colombia"),
-            html.H5("1. Matriz energética Colombia 2014-2022"),
-            html.P("Entre 2014 y 2022, la matriz energética colombiana se mantuvo fuertemente concentrada en la energía hidroeléctrica (60–70%) " \
-            "y en combustibles fósiles (carbón, petróleo y gas natural). A pesar del incremento reciente de la energía solar, su aporte, junto con " \
-            "el de la eólica, continúa siendo marginal frente al total."),
-            html.H5("2. Vulnerabilidad frente al cambio climático"),
-            html.P("La alta participación de la hidroeléctrica convierte al sistema en vulnerable a fenómenos como El Niño, que provocan caídas " \
-            "significativas en la generación. En estos periodos, la dependencia de fuentes fósiles aumenta, lo que no solo reduce la seguridad " \
-            "energética, sino que incrementa las emisiones de CO₂.")
+            html.H5("Diversificación acelerada de la matriz energética"),
+            html.P("Fomentar la incorporación de energías renovables no convencionales (solar y eólica) mediante incentivos tributarios, " \
+            "financiamiento de proyectos y agilización de trámites regulatorios, con el fin de reducir la dependencia de la hidroeléctrica y los combustibles fósiles.")
         ], className="card", style={"flex": "1", "textAlign": "justify", "padding": "20px"}),
     ], style={"display": "flex", "gap": "20px"})
 ])
